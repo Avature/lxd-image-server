@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+# Use for debug building
+# export DH_VERBOSE=1
+
+%:
+        dh $@ --with python-virtualenv
+
+override_dh_compress:
+        dh_compress --exclude=README.md

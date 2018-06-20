@@ -1,0 +1,12 @@
+[Unit]
+Description=Daemon to update lxd image server
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Restart=on-failure
+User=www-data
+
+ExecStart=/bin/sh -c 'lxd-image-server watch >/var/log/lxd-image-server/lxd-image-server.log 2>&1'

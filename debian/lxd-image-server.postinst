@@ -1,0 +1,34 @@
+#!/bin/bash -eu
+
+function fix_permissions {
+      chown -R www-data:www-data /var/{log,lib}/lxd-image-server
+      touch /var/log/lxd-image-server/lxd-image-server.log
+      chown www-data:www-data /var/log/lxd-image-server/lxd-image-server.log
+}
+
+case "$1" in
+  configure)
+      if ! getent passwd www-data >/dev/null ; then
+          adduser --system --no-create-home www-data
+      fi
+      fix_permissions
+      lxd-image-server init
+      ln -s /etc/nginx/sites-available/simplestreams.conf /etc/nginx/sites-enabled/simplestreams.conf
+      nginx -s reload
+      # Enable the service to start on boot
+      if command -V systemctl &> /dev/null; then
+          systemctl enable lxd-image-server
+      fi
+  ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+    echo "postinst not doing anything for \`$1'" >&2
+  ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+  ;;
+esac
+
+# Dont delete this
+#DEBHELPER#

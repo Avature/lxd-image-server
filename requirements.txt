@@ -1,0 +1,5 @@
+setuptools>=28.7.1
+attrs>=15.2.0
+click
+inotify
+cryptography

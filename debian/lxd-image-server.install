@@ -1,0 +1,3 @@
+#!/usr/bin/dh-exec
+
+resources/simplestreams.conf => /etc/nginx/sites-available/simplestreams.conf

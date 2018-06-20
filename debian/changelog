@@ -1,0 +1,5 @@
+lxd-image-server (0.0.1) stable; urgency=medium
+
+  * Initial release.
+
+ -- David Burgos <david.burgos@avature.net>  Fri, 15 Jun 2018 16:29:49 +0200
