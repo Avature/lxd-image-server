@@ -1,0 +1,16 @@
+[Unit]
+Description=Daemon to update lxd image server
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Restart=on-failure
+User=lxdadm
+StandardOutput=journal+console
+Environment="LC_ALL=C.UTF-8"
+Environment="LANG=C.UTF-8"
+
+ExecStart=/opt/lxd-image-server/bin/lxd-image-server watch
+ExecReload=/bin/sh -c '/usr/bin/lxd-image-server reload'

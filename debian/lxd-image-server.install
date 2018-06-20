@@ -1,0 +1,5 @@
+#!/usr/bin/dh-exec
+
+resources/nginx/includes/lxd-image-server.pkg.conf => /etc/nginx/lxd-image-server/lxd-image-server.pkg.conf
+resources/nginx/simplestreams.conf => /etc/nginx/sites-available/simplestreams.conf
+config.toml etc/lxd-image-server/

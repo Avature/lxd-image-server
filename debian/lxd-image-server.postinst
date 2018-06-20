@@ -1,0 +1,59 @@
+#!/bin/bash -eu
+
+export DH_VERBOSE=0
+
+function fix_permissions {
+      chown -R lxdadm:www-data /var/log/lxd-image-server
+      chown -R lxdadm:www-data /var/www/simplestreams
+      touch /var/log/lxd-image-server/lxd-image-server.log
+      chown lxdadm:www-data /var/log/lxd-image-server/lxd-image-server.log
+      chown -R lxdadm:www-data /var/run/lxd-image-server
+}
+
+function add_local_hosts {
+    if ! grep -q lxd.localhost /etc/hosts; then
+        echo 127.0.0.1 lxd.localhost >> /etc/hosts
+    fi
+    if ! grep -q lxd-image-server.localhost /etc/hosts; then
+        echo 127.0.0.1 lxd-image-server.localhost >> /etc/hosts
+    fi
+}
+
+case "$1" in
+  configure)
+      if ! getent passwd www-data >/dev/null ; then
+          adduser --system --no-create-home www-data
+      fi
+
+      if ! getent passwd lxdadm >/dev/null ; then
+          useradd -md /home/lxdadm -s /bin/bash -c 'Image server uploader' -g www-data lxdadm
+      fi
+
+      if [ ! -d "/var/www/simplestreams" ];then
+          mkdir /var/www/simplestreams
+      fi
+
+      fix_permissions
+      add_local_hosts
+      export LC_ALL=C.UTF-8
+      export LANG=C.UTF-8
+      /opt/lxd-image-server/bin/lxd-image-server init
+
+      # Enable the service to start on boot
+      if command -V systemctl &> /dev/null; then
+          systemctl enable lxd-image-server
+          systemctl start lxd-image-server
+      fi
+  ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+    echo "postinst not doing anything for \`$1'" >&2
+  ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+  ;;
+esac
+
+# Dont delete this
+#DEBHELPER#

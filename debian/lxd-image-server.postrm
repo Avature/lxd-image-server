@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+sed -i.bkp_$(date +%s) -e '/^127.0.0.1 lxd[-image-server]*\.localhost$/d' /etc/hosts

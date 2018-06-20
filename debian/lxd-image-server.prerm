@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+if service lxd-image-server status | grep -q 'running' ; then
+    service lxd-image-server stop
+fi

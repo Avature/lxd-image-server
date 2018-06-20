@@ -1,0 +1,30 @@
+#!/bin/bash -eu
+
+function usage(){
+    echo "$0 [--help] [--lint-only|-l] [--verbose|-v]"
+    echo
+    echo "    --verbose: be more verbose"
+}
+
+ut=true
+verbose=''
+
+for arg in "$@" ; do
+    case $arg in
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        --verbose|-v)
+            verbose=-v
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+pip3 install tox
+
+tox $verbose
