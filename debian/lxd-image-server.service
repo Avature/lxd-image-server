@@ -8,5 +8,6 @@ WantedBy=multi-user.target
 [Service]
 Restart=on-failure
 User=www-data
+WorkingDirectory=/opt/lxd-image-server
 
-ExecStart=/bin/sh -c 'lxd-image-server watch >/var/log/lxd-image-server/lxd-image-server.log 2>&1'
+ExecStart=/bin/sh -c '/opt/lxd-image-server/bin/lxd-image-server watch >/var/log/lxd-image-server/lxd-image-server.log 2>&1'

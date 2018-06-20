@@ -1,7 +1,9 @@
 #!/bin/bash -eu
 
+export DH_VERBOSE=0
+
 function fix_permissions {
-      chown -R www-data:www-data /var/{log,lib}/lxd-image-server
+      chown -R www-data:www-data /var/log/lxd-image-server
       touch /var/log/lxd-image-server/lxd-image-server.log
       chown www-data:www-data /var/log/lxd-image-server/lxd-image-server.log
 }
@@ -11,13 +13,17 @@ case "$1" in
       if ! getent passwd www-data >/dev/null ; then
           adduser --system --no-create-home www-data
       fi
+      if [ ! -d "/var/log/lxd-image-server/" ];then
+          mkdir /var/log/lxd-image-server/
+      fi
       fix_permissions
-      lxd-image-server init
+      /opt/lxd-image-server/bin/lxd-image-server init
       ln -s /etc/nginx/sites-available/simplestreams.conf /etc/nginx/sites-enabled/simplestreams.conf
       nginx -s reload
       # Enable the service to start on boot
       if command -V systemctl &> /dev/null; then
           systemctl enable lxd-image-server
+          systemctl start lxd-image-server
       fi
   ;;
 

@@ -23,7 +23,6 @@ def generate_cert(path):
     name = x509.Name([
         x509.NameAttribute(NameOID.COMMON_NAME, gethostname())])
 
-    basic_contraints = x509.BasicConstraints(ca=True, path_length=0)
     now = datetime.utcnow()
     cert = (
         x509.CertificateBuilder()
@@ -31,21 +30,18 @@ def generate_cert(path):
         .issuer_name(name)
         .public_key(key.public_key())
         .serial_number(1000)
-        .not_valid_before(now)
+        .not_valid_before(now - timedelta(days=10))
         .not_valid_after(now + timedelta(days=10 * 365))
-        .add_extension(basic_contraints, False)
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
+            critical=False,)
         .sign(key, hashes.SHA256(), default_backend()))
 
-    cert_data = cert.public_bytes(encoding=serialization.Encoding.PEM)
-    key_data = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),)
+    with open(join(path, KEY_FILE), 'wb') as f:
+        f.write(key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),))
 
-    with open(join(path, CERT_FILE), 'wb') as pem_out:
-        for line in cert_data.splitlines():
-            pem_out.write(line)
-
-    with open(join(path, KEY_FILE), 'wb') as pem_out:
-        for line in key_data.splitlines():
-            pem_out.write(line)
+    with open(join(path, CERT_FILE), 'wb') as f:
+        f.write(cert.public_bytes(serialization.Encoding.PEM))

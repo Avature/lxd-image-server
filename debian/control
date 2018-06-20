@@ -5,7 +5,6 @@ Maintainer: David Burgos <david.burgos@avature.net>
 Standards-Version: 4.0.0
 Build-Depends: debhelper (>= 9),
                dh-exec,
-               nginx,
                python3,
                python-dev,
                dh-virtualenv (>= 0.8)
@@ -13,5 +12,6 @@ Build-Depends: debhelper (>= 9),
 Package: lxd-image-server
 Architecture: all
 Depends: python3,
-         openssl
+         openssl,
+         nginx
 Description: Package to create and manage a simplestreams lxd image server on top of nginx.

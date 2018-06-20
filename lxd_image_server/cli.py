@@ -11,11 +11,11 @@ from inotify.constants import IN_ATTRIB, IN_DELETE, IN_MOVED_FROM, IN_MOVED_TO
 from lxd_image_server.tools.cert import generate_cert
 
 
-logging.basicConfig(
-    filename='/var/log/lxd-image-server.log',
-    level=getattr(logging, 'INFO'),
-    format='[%(asctime)s] [%(levelname)s] %(message)s'
-)
+# logging.basicConfig(
+#     filename='/var/log/lxd-image-server.log',
+#     level=getattr(logging, 'INFO'),
+#     format='[%(asctime)s] [%(levelname)s] %(message)s'
+# )
 logger = logging.getLogger('lxd-image-server')
 
 
@@ -38,7 +38,8 @@ def cli():
 @cli.command()
 @click.argument('img_dir', nargs=1, default='/var/www/images')
 @click.argument('streams_dir', nargs=1, default='/var/www/streams/v1')
-def update(img_dir, streams_dir):
+@click.pass_context
+def update(ctx, img_dir, streams_dir):
     index = Index()
     images = Images()
     if img_dir[-1] == '/':
@@ -65,14 +66,16 @@ def init(ctx, root_dir, ssl_dir):
     if not os.path.exists(root_dir):
         logger.error('Root directory does not exists')
     else:
+        if not os.path.exists('/etc/nginx/ssl'):
+            os.makedirs('/etc/nginx/ssl')
         generate_cert(ssl_dir)
         if not os.path.exists(os.path.join(root_dir, 'images')):
             os.makedirs(os.path.join(root_dir, 'images'))
         if not os.path.exists(os.path.join(root_dir, 'streams/v1')):
             os.makedirs(os.path.join(root_dir, 'streams/v1'))
 
-    ctx.invoke(update, os.path.join(root_dir, 'images'),
-               os.path.join(root_dir, 'streams', 'v1'))
+    ctx.invoke(update, img_dir=os.path.join(root_dir, 'images'),
+               streams_dir=os.path.join(root_dir, 'streams', 'v1'))
 
 
 @cli.command()
@@ -95,7 +98,7 @@ def main():
     try:
         sys.exit(cli())
     except Exception:
-        click.echo(traceback.format_exc())
+        logger.error(traceback.format_exc())
         sys.exit(1)
 
 
