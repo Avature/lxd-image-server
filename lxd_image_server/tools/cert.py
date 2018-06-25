@@ -1,4 +1,5 @@
-from socket import gethostname
+import socket
+import ipaddress
 from os.path import join
 from datetime import datetime, timedelta
 from cryptography import x509
@@ -13,6 +14,12 @@ CERT_FILE = "nginx.crt"
 KEY_FILE = "nginx.key"
 
 
+def get_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
+
+
 def generate_cert(path):
     key = rsa.generate_private_key(
         public_exponent=65537,
@@ -21,9 +28,11 @@ def generate_cert(path):
     )
 
     name = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, gethostname())])
+        x509.NameAttribute(NameOID.COMMON_NAME, socket.gethostname())])
 
     now = datetime.utcnow()
+    basic_contraints = x509.BasicConstraints(ca=True, path_length=0)
+    ip_address = get_address()
     cert = (
         x509.CertificateBuilder()
         .subject_name(name)
@@ -32,8 +41,12 @@ def generate_cert(path):
         .serial_number(1000)
         .not_valid_before(now - timedelta(days=10))
         .not_valid_after(now + timedelta(days=10 * 365))
+        .add_extension(basic_contraints, False)
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
+            x509.SubjectAlternativeName([
+                x509.DNSName(u"localhost"),
+                x509.DNSName(ip_address),
+                x509.IPAddress(ipaddress.ip_address(ip_address))]),
             critical=False,)
         .sign(key, hashes.SHA256(), default_backend()))
 

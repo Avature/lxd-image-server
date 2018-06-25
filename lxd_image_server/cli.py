@@ -1,4 +1,5 @@
 import os
+import stat
 import sys
 import re
 import traceback
@@ -11,11 +12,11 @@ from inotify.constants import IN_ATTRIB, IN_DELETE, IN_MOVED_FROM, IN_MOVED_TO
 from lxd_image_server.tools.cert import generate_cert
 
 
-# logging.basicConfig(
-#     filename='/var/log/lxd-image-server.log',
-#     level=getattr(logging, 'INFO'),
-#     format='[%(asctime)s] [%(levelname)s] %(message)s'
-# )
+logging.basicConfig(
+    filename='/var/log/lxd-image-server/lxd-image-server.log',
+    level=getattr(logging, 'INFO'),
+    format='[%(asctime)s] [%(levelname)s] %(message)s'
+)
 logger = logging.getLogger('lxd-image-server')
 
 
@@ -29,6 +30,13 @@ def needs_update(events):
             return True
     return False
 
+def fix_permissions(path):
+    os.chmod(path, 0o777)
+    for root, dirs, files in os.walk(path):
+        for elem in files:
+            os.chmod(os.path.join(root, elem), 0o777)
+        for elem in dirs:
+            os.chmod(os.path.join(root, elem), 0o777)
 
 @click.group()
 def cli():
@@ -42,6 +50,7 @@ def cli():
 def update(ctx, img_dir, streams_dir):
     index = Index()
     images = Images()
+
     if img_dir[-1] == '/':
         img_dir = img_dir[:-1]
 
@@ -66,16 +75,27 @@ def init(ctx, root_dir, ssl_dir):
     if not os.path.exists(root_dir):
         logger.error('Root directory does not exists')
     else:
-        if not os.path.exists('/etc/nginx/ssl'):
-            os.makedirs('/etc/nginx/ssl')
-        generate_cert(ssl_dir)
-        if not os.path.exists(os.path.join(root_dir, 'images')):
-            os.makedirs(os.path.join(root_dir, 'images'))
-        if not os.path.exists(os.path.join(root_dir, 'streams/v1')):
-            os.makedirs(os.path.join(root_dir, 'streams/v1'))
+        if not os.path.exists(ssl_dir):
+            os.makedirs(ssl_dir)
 
-    ctx.invoke(update, img_dir=os.path.join(root_dir, 'images'),
-               streams_dir=os.path.join(root_dir, 'streams', 'v1'))
+        generate_cert(ssl_dir)
+
+        img_dir = os.path.join(root_dir, 'images')
+        streams_dir = os.path.join(root_dir, 'streams/v1')
+        if not os.path.exists(img_dir):
+            os.makedirs(img_dir)
+        if not os.path.exists(streams_dir):
+            os.makedirs(streams_dir)
+
+        os.symlink('/etc/nginx/sites-available/simplestreams.conf',
+                   '/etc/nginx/sites-enabled/simplestreams.conf')
+        os.system('nginx -s reload')
+
+        ctx.invoke(update, img_dir=os.path.join(root_dir, 'images'),
+                   streams_dir=os.path.join(root_dir, 'streams', 'v1'))
+
+        fix_permissions(img_dir)
+        fix_permissions(streams_dir)
 
 
 @cli.command()
