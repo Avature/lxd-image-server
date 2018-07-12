@@ -25,8 +25,9 @@ setup(
     packages=find_packages(),
     classifiers=[
         'Intended Audience :: Developers',
-        'Intended Audience :: QAs',
-        'Topic :: Software Development',
-        'Topic :: Software Testing'
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: POSIX :: Linux',
+        'Topic :: Internet :: WWW/HTTP :: HTTP Servers'
     ]
 )

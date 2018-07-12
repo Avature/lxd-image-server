@@ -1,7 +1,10 @@
 import os
 import hashlib
 import json
+from pathlib import Path
 import attr
+from lxd_image_server.tools.operation import OperationType
+from lxd_image_server.simplestreams.index import Index
 
 
 @attr.s
@@ -9,7 +12,6 @@ class Version(object):
     name = attr.ib()
     path = attr.ib()
     root_path = attr.ib()
-    combined_sha = hashlib.sha256()
 
     def __attrs_post_init__(self):
         self.root = {
@@ -17,6 +19,7 @@ class Version(object):
                 'items': {}
             }
         }
+        self.combined_sha = hashlib.new('sha256')
 
         for f in [x for x in os.listdir(self.path)
                   if os.path.isfile(os.path.join(self.path, x))]:
@@ -55,16 +58,45 @@ class Version(object):
 
 @attr.s
 class Images(object):
+    path = attr.ib(default=None)
+    rebuild = attr.ib(default=False)
 
     def __attrs_post_init__(self):
-        self.root = {
-            'format': 'products:1.0',
-            'datatype': 'image-downloads',
-            'content_id': 'images',
-            'products': {}
-        }
+        self.index = Index(self.path, self.rebuild)
+        if not self.path or not Path(self.path).exists() or self.rebuild:
+            self.root = {
+                'format': 'products:1.0',
+                'datatype': 'image-downloads',
+                'content_id': 'images',
+                'products': {}
+            }
+        else:
+            with open(str(Path(self.path, 'images.json'))) as json_file:
+                self.root = json.load(json_file)
 
-    def add(self, name, path, root):
+    def update(self, operations):
+        for op in operations:
+            if op.is_root:
+                for product in [x for x in self.root['products']
+                                if op.name in x]:
+                    del self.root['products'][product]
+            else:
+                # Always delete for the operations and add if needed
+                if op.name in self.root['products'] and \
+                    op.path.split('/')[-1] in \
+                        self.root['products'][op.name]['versions']:
+                    del self.root['products'][op.name]['versions'][
+                        op.path.split('/')[-1]
+                    ]
+                    if not self.root['products'][op.name]['versions']:
+                        del self.root['products'][op.name]
+                        self.index.delete(op.name)
+
+                if op.operation == OperationType.ADD_MOD:
+                    self._add(op.name, op.path, op.root)
+                    self.index.add(op.name)
+
+    def _add(self, name, path, root):
         if os.path.exists(path):
             v = Version(path.split('/')[-1], path, root)
 
@@ -85,3 +117,9 @@ class Images(object):
 
     def to_json(self):
         return json.dumps(self.root)
+
+    def save(self):
+        if self.path:
+            with open(str(Path(self.path, 'images.json')), 'w') as outfile:
+                json.dump(self.root, outfile)
+        self.index.save()

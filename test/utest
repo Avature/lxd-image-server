@@ -1,0 +1,36 @@
+#!/bin/bash -eu
+
+function usage(){
+    echo "$0 [--help] [--lint-only|-l] [--verbose|-v]"
+    echo
+    echo "    --verbose: be more verbose"
+}
+
+ut=true
+verbose=''
+
+for arg in "$@" ; do
+    case $arg in
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        --verbose|-v)
+            verbose=-v
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+TOX_FLAGS=''
+# precise does not include the tox package
+if ! command -v tox &> /dev/null; then
+    pip install tox
+    TOX_FLAGS='-e py35'
+fi
+
+cd "$(dirname "$0")/.."
+tox $TOX_FLAGS -- $verbose

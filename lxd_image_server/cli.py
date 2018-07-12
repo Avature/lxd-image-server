@@ -1,34 +1,50 @@
 import os
-import stat
 import sys
 import re
 import traceback
 import logging
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 import click
-from lxd_image_server.simplestreams.index import Index
-from lxd_image_server.simplestreams.images import Images
 import inotify.adapters
-from inotify.constants import IN_ATTRIB, IN_DELETE, IN_MOVED_FROM, IN_MOVED_TO
+from inotify.constants import (IN_ATTRIB, IN_DELETE, IN_MOVED_FROM,
+                               IN_MOVED_TO, IN_CLOSE_WRITE)
+from lxd_image_server.simplestreams.images import Images
 from lxd_image_server.tools.cert import generate_cert
+from lxd_image_server.tools.operation import Operations
 
 
-logging.basicConfig(
-    filename='/var/log/lxd-image-server/lxd-image-server.log',
-    level=getattr(logging, 'INFO'),
-    format='[%(asctime)s] [%(levelname)s] %(message)s'
-)
 logger = logging.getLogger('lxd-image-server')
 
 
+def configure_log(verbose=False):
+    filename = '/var/log/lxd-image-server/lxd-image-server.log'
+
+    handler = TimedRotatingFileHandler(
+        filename,
+        when="d", interval=7, backupCount=4)
+    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+    handler.setFormatter(formatter)
+
+    logger.setLevel('DEBUG' if verbose else 'INFO')
+    logger.addHandler(handler)
+
+
 def needs_update(events):
+    needs_upd = False
+    modified_files = []
     for event in list(events):
         if re.match('\d{8}_\d{2}:\d{2}', event[3]) or \
             any(k in event[1]
-                for k in ('IN_MOVED_FROM', 'IN_MOVED_TO', 'IN_DELETE')):
-            logger.info('Event: PATH=[{}] FILENAME=[{}] EVENT_TYPES={}'
+                for k in ('IN_MOVED_FROM', 'IN_MOVED_TO',
+                          'IN_DELETE', 'IN_CLOSE_WRITE')):
+            logger.debug('Event: PATH=[{}] FILENAME=[{}] EVENT_TYPES={}'
                         .format(event[2], event[3], event[1]))
-            return True
-    return False
+            modified_files.append(event)
+            needs_upd = True
+
+    return needs_upd, modified_files
+
 
 def fix_permissions(path):
     os.chmod(path, 0o777)
@@ -38,47 +54,49 @@ def fix_permissions(path):
         for elem in dirs:
             os.chmod(os.path.join(root, elem), 0o777)
 
+
 @click.group()
-def cli():
-    pass
+@click.option('--verbose', help='Sets log level to debug',
+              is_flag=True, default=False)
+def cli(verbose):
+    configure_log(verbose)
 
 
 @cli.command()
-@click.argument('img_dir', nargs=1, default='/var/www/images')
-@click.argument('streams_dir', nargs=1, default='/var/www/streams/v1')
+@click.argument('img_dir', default='/var/www/images')
+@click.argument('streams_dir', default='/var/www/streams/v1')
 @click.pass_context
 def update(ctx, img_dir, streams_dir):
-    index = Index()
-    images = Images()
+    logger.info('Updating server')
 
-    if img_dir[-1] == '/':
-        img_dir = img_dir[:-1]
+    img_dir = img_dir.rstrip()
+    images = Images(streams_dir, rebuild=True)
 
-    for root, dirs, _ in os.walk(img_dir):
-        for elem in [x for x in dirs if re.match('\d{8}_\d{2}:\d{2}', x)]:
-            path = os.path.join(root, elem)
-            name = ':'.join(path.replace(img_dir + '/', '').split('/')[:-1])
-            index.add(name)
-            images.add(name, path, '/'.join(img_dir.split('/')[:-1]))
+    # Generate a fake event to update all tree
+    fake_events = [
+        (None, ['IN_ISDIR', 'IN_CREATE'],
+            str(Path(img_dir).parent), str(Path(img_dir).name))
+    ]
+    operations = Operations(fake_events, str(img_dir))
+    images.update(operations.ops)
+    images.save()
 
-    index_file = open(os.path.join(streams_dir, 'index.json'), 'w')
-    images_file = open(os.path.join(streams_dir, 'images.json'), 'w')
-    index_file.write(index.to_json())
-    images_file.write(images.to_json())
+    logger.info('Server updated')
 
 
 @cli.command()
-@click.argument('root_dir', nargs=1, default='/var/www')
-@click.argument('ssl_dir', nargs=1, default='/etc/nginx/ssl')
+@click.argument('root_dir', default='/var/www')
+@click.argument('ssl_dir', default='/etc/nginx/ssl')
 @click.pass_context
 def init(ctx, root_dir, ssl_dir):
     if not os.path.exists(root_dir):
         logger.error('Root directory does not exists')
     else:
-        if not os.path.exists(ssl_dir):
+        if not Path(ssl_dir).exists():
             os.makedirs(ssl_dir)
 
-        generate_cert(ssl_dir)
+        if not Path(ssl_dir, 'nginx.key').exists():
+            generate_cert(ssl_dir)
 
         img_dir = os.path.join(root_dir, 'images')
         streams_dir = os.path.join(root_dir, 'streams/v1')
@@ -86,32 +104,41 @@ def init(ctx, root_dir, ssl_dir):
             os.makedirs(img_dir)
         if not os.path.exists(streams_dir):
             os.makedirs(streams_dir)
-
-        os.symlink('/etc/nginx/sites-available/simplestreams.conf',
-                   '/etc/nginx/sites-enabled/simplestreams.conf')
+        if not os.path.exists('/etc/nginx/sites-enabled/simplestreams.conf'):
+            os.symlink('/etc/nginx/sites-available/simplestreams.conf',
+                       '/etc/nginx/sites-enabled/simplestreams.conf')
         os.system('nginx -s reload')
 
-        ctx.invoke(update, img_dir=os.path.join(root_dir, 'images'),
-                   streams_dir=os.path.join(root_dir, 'streams', 'v1'))
+        if not Path(root_dir, 'streams', 'v1', 'images.json').exists():
+            ctx.invoke(update, img_dir=os.path.join(root_dir, 'images'),
+                       streams_dir=os.path.join(root_dir, 'streams', 'v1'))
 
         fix_permissions(img_dir)
         fix_permissions(streams_dir)
 
 
 @cli.command()
-@click.argument('img_dir', nargs=1, default='/var/www/images')
-@click.argument('streams_dir', nargs=1, default='/var/www/streams/v1')
+@click.argument('img_dir', default='/var/www/images')
+@click.argument('streams_dir', default='/var/www/streams/v1')
 @click.pass_context
 def watch(ctx, img_dir, streams_dir):
+    img_dir = img_dir.rstrip()
     i = inotify.adapters.InotifyTree(img_dir,
                                      mask=(IN_ATTRIB | IN_DELETE |
-                                           IN_MOVED_FROM | IN_MOVED_TO))
+                                           IN_MOVED_FROM | IN_MOVED_TO |
+                                           IN_CLOSE_WRITE))
 
     while True:
         events = i.event_gen(yield_nones=False, timeout_s=15)
-        if needs_update(events):
-            logger.info('Updating server')
-            ctx.forward(update)
+        needs_upd, files_changed = needs_update(events)
+        if needs_upd:
+            ops = Operations(files_changed, img_dir)
+            logger.info('Updating server:\n\t\t%s', '\n\t\t'.join(
+                str(x) for x in ops.ops))
+            images = Images(streams_dir)
+            images.update(ops.ops)
+            images.save()
+            logger.info('Server updated')
 
 
 def main():
