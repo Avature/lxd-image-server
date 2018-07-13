@@ -30,7 +30,7 @@ INDEX = {
                                 '14c29b7eaf68089d1039c6e55384c',
                             'ftype': 'squashfs',
                             'size': 32, 'path':
-                                '/ubuntu/xenial/amd64/default/2018062'
+                                'images/ubuntu/xenial/amd64/default/2018062'
                                 '0_12:18/rootfs.squashfs'
                         },
                         'lxd.tar.xz': {
@@ -42,7 +42,7 @@ INDEX = {
                             'combined_sha256':
                                 'f3cb81db18dfc60c9ce1ffc07b5614549dc22'
                                 '22890254ba4ccf2469f58e57a5d',
-                            'path': '/ubuntu/xenial/amd64/default/2018'
+                            'path': 'images/ubuntu/xenial/amd64/default/2018'
                                 '0620_12:18/lxd.tar.xz'
                         }
                     }
@@ -62,7 +62,7 @@ EXTRA = {
                     '14c29b7eaf68089d1039c6e55384c',
                 'ftype': 'squashfs',
                 'size': 32, 'path':
-                    '/ubuntu/xenial/amd64/default/2018062'
+                    'images/ubuntu/xenial/amd64/default/2018062'
                     '0_12:28/rootfs.squashfs'
             },
             'lxd.tar.xz': {
@@ -74,7 +74,7 @@ EXTRA = {
                 'combined_sha256':
                     'f3cb81db18dfc60c9ce1ffc07b5614549dc22'
                     '22890254ba4ccf2469f58e57a5d',
-                'path': '/ubuntu/xenial/amd64/default/2018'
+                'path': 'images/ubuntu/xenial/amd64/default/2018'
                     '0620_12:28/lxd.tar.xz'
             }
         }

@@ -1,4 +1,3 @@
-import os
 import hashlib
 import json
 from pathlib import Path
@@ -21,15 +20,16 @@ class Version(object):
         }
         self.combined_sha = hashlib.new('sha256')
 
-        for f in [x for x in os.listdir(self.path)
-                  if os.path.isfile(os.path.join(self.path, x))]:
+        for f in [str(x.name) for x in Path(self.path).iterdir()
+                  if Path(self.path, x).is_file()]:
             self.root[self.name]['items'].update({
                 f: {
                     'sha256':
-                        self._sha256_checksum(os.path.join(self.path, f)),
-                    'size': os.path.getsize(os.path.join(self.path, f)),
+                        self._sha256_checksum(str(Path(self.path, f))),
+                    'size': Path(self.path, f).stat().st_size,
                     'path':
-                        os.path.join(self.path.replace(self.root_path, ''), f),
+                        str('images' /
+                            Path(self.path).relative_to(self.root_path) / f),
                     'ftype': self._get_type(f)
                 }
             })
@@ -97,7 +97,7 @@ class Images(object):
                     self.index.add(op.name)
 
     def _add(self, name, path, root):
-        if os.path.exists(path):
+        if Path(path).exists():
             v = Version(path.split('/')[-1], path, root)
 
             if name not in self.root['products']:

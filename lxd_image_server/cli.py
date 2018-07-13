@@ -39,7 +39,7 @@ def needs_update(events):
                 for k in ('IN_MOVED_FROM', 'IN_MOVED_TO',
                           'IN_DELETE', 'IN_CLOSE_WRITE')):
             logger.debug('Event: PATH=[{}] FILENAME=[{}] EVENT_TYPES={}'
-                        .format(event[2], event[3], event[1]))
+                         .format(event[2], event[3], event[1]))
             modified_files.append(event)
             needs_upd = True
 
@@ -47,12 +47,12 @@ def needs_update(events):
 
 
 def fix_permissions(path):
-    os.chmod(path, 0o777)
+    Path(path).chmod(0o777)
     for root, dirs, files in os.walk(path):
         for elem in files:
-            os.chmod(os.path.join(root, elem), 0o777)
+            Path(root, elem).chmod(0o777)
         for elem in dirs:
-            os.chmod(os.path.join(root, elem), 0o777)
+            Path(root, elem).chmod(0o777)
 
 
 @click.group()
@@ -89,7 +89,7 @@ def update(ctx, img_dir, streams_dir):
 @click.argument('ssl_dir', default='/etc/nginx/ssl')
 @click.pass_context
 def init(ctx, root_dir, ssl_dir):
-    if not os.path.exists(root_dir):
+    if not Path(root_dir).exists():
         logger.error('Root directory does not exists')
     else:
         if not Path(ssl_dir).exists():
@@ -98,20 +98,20 @@ def init(ctx, root_dir, ssl_dir):
         if not Path(ssl_dir, 'nginx.key').exists():
             generate_cert(ssl_dir)
 
-        img_dir = os.path.join(root_dir, 'images')
-        streams_dir = os.path.join(root_dir, 'streams/v1')
-        if not os.path.exists(img_dir):
+        img_dir = str(Path(root_dir, 'images'))
+        streams_dir = str(Path(root_dir, 'streams/v1'))
+        if not Path(img_dir).exists():
             os.makedirs(img_dir)
-        if not os.path.exists(streams_dir):
+        if not Path(streams_dir).exists():
             os.makedirs(streams_dir)
-        if not os.path.exists('/etc/nginx/sites-enabled/simplestreams.conf'):
-            os.symlink('/etc/nginx/sites-available/simplestreams.conf',
-                       '/etc/nginx/sites-enabled/simplestreams.conf')
-        os.system('nginx -s reload')
+        conf_path = Path('/etc/nginx/sites-enabled/simplestreams.conf')
+        if not conf_path.exists():
+            conf_path.symlink_to('/etc/nginx/sites-enabled/simplestreams.conf')
+            os.system('nginx -s reload')
 
         if not Path(root_dir, 'streams', 'v1', 'images.json').exists():
-            ctx.invoke(update, img_dir=os.path.join(root_dir, 'images'),
-                       streams_dir=os.path.join(root_dir, 'streams', 'v1'))
+            ctx.invoke(update, img_dir=str(Path(root_dir, 'images')),
+                       streams_dir=str(Path(root_dir, 'streams', 'v1')))
 
         fix_permissions(img_dir)
         fix_permissions(streams_dir)
