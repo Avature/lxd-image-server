@@ -17,8 +17,8 @@ from lxd_image_server.tools.operation import Operations
 logger = logging.getLogger('lxd-image-server')
 
 
-def configure_log(verbose=False):
-    filename = '/var/log/lxd-image-server/lxd-image-server.log'
+def configure_log(log_file, verbose=False):
+    filename = log_file
 
     handler = TimedRotatingFileHandler(
         filename,
@@ -31,7 +31,6 @@ def configure_log(verbose=False):
 
 
 def needs_update(events):
-    needs_upd = False
     modified_files = []
     for event in list(events):
         if re.match('\d{8}_\d{2}:\d{2}', event[3]) or \
@@ -41,9 +40,8 @@ def needs_update(events):
             logger.debug('Event: PATH=[{}] FILENAME=[{}] EVENT_TYPES={}'
                          .format(event[2], event[3], event[1]))
             modified_files.append(event)
-            needs_upd = True
 
-    return needs_upd, modified_files
+    return modified_files
 
 
 def fix_permissions(path):
@@ -56,26 +54,34 @@ def fix_permissions(path):
 
 
 @click.group()
+@click.option('--log-file', default='./lxd-image-server.log',
+              show_default=True)
 @click.option('--verbose', help='Sets log level to debug',
               is_flag=True, default=False)
-def cli(verbose):
-    configure_log(verbose)
+def cli(log_file, verbose):
+    configure_log(log_file, verbose)
 
 
 @cli.command()
-@click.argument('img_dir', default='/var/www/images')
-@click.argument('streams_dir', default='/var/www/streams/v1')
+@click.option('--img_dir', default='/var/www/simplestreams/images',
+              show_default=True,
+              type=click.Path(exists=True, file_okay=False,
+                              resolve_path=True),
+              callback=lambda ctx, param, val: Path(val))
+@click.option('--streams_dir', default='/var/www/simplestreams/streams/v1',
+              show_default=True,
+              type=click.Path(exists=True, file_okay=False,
+                              resolve_path=True))
 @click.pass_context
 def update(ctx, img_dir, streams_dir):
     logger.info('Updating server')
 
-    img_dir = img_dir.rstrip()
-    images = Images(streams_dir, rebuild=True)
+    images = Images(str(Path(streams_dir).resolve()), rebuild=True)
 
     # Generate a fake event to update all tree
     fake_events = [
         (None, ['IN_ISDIR', 'IN_CREATE'],
-            str(Path(img_dir).parent), str(Path(img_dir).name))
+            str(img_dir.parent), str(img_dir.name))
     ]
     operations = Operations(fake_events, str(img_dir))
     images.update(operations.ops)
@@ -85,18 +91,20 @@ def update(ctx, img_dir, streams_dir):
 
 
 @cli.command()
-@click.argument('root_dir', default='/var/www')
-@click.argument('ssl_dir', default='/etc/nginx/ssl')
+@click.option('--root_dir', default='/var/www/simplestreams',
+              show_default=True)
+@click.option('--ssl_dir', default='/etc/nginx/ssl', show_default=True,
+              callback=lambda ctx, param, val: Path(val))
 @click.pass_context
 def init(ctx, root_dir, ssl_dir):
     if not Path(root_dir).exists():
         logger.error('Root directory does not exists')
     else:
-        if not Path(ssl_dir).exists():
-            os.makedirs(ssl_dir)
+        if not ssl_dir.exists():
+            os.makedirs(str(ssl_dir))
 
-        if not Path(ssl_dir, 'nginx.key').exists():
-            generate_cert(ssl_dir)
+        if not (ssl_dir / 'nginx.key').exists():
+            generate_cert(str(ssl_dir))
 
         img_dir = str(Path(root_dir, 'images'))
         streams_dir = str(Path(root_dir, 'streams/v1'))
@@ -106,36 +114,41 @@ def init(ctx, root_dir, ssl_dir):
             os.makedirs(streams_dir)
         conf_path = Path('/etc/nginx/sites-enabled/simplestreams.conf')
         if not conf_path.exists():
-            conf_path.symlink_to('/etc/nginx/sites-enabled/simplestreams.conf')
+            conf_path.symlink_to(
+                '/etc/nginx/sites-available/simplestreams.conf')
             os.system('nginx -s reload')
 
         if not Path(root_dir, 'streams', 'v1', 'images.json').exists():
-            ctx.invoke(update, img_dir=str(Path(root_dir, 'images')),
-                       streams_dir=str(Path(root_dir, 'streams', 'v1')))
+            ctx.invoke(update, img_dir=Path(root_dir, 'images'),
+                       streams_dir=Path(root_dir, 'streams', 'v1'))
 
         fix_permissions(img_dir)
         fix_permissions(streams_dir)
 
 
 @cli.command()
-@click.argument('img_dir', default='/var/www/images')
-@click.argument('streams_dir', default='/var/www/streams/v1')
+@click.option('--img_dir', default='/var/www/simplestreams/images',
+              show_default=True,
+              type=click.Path(exists=True, file_okay=False,
+                              resolve_path=True))
+@click.option('--streams_dir', default='/var/www/simplestreams/streams/v1',
+              type=click.Path(exists=True, file_okay=False,
+                              resolve_path=True), show_default=True)
 @click.pass_context
 def watch(ctx, img_dir, streams_dir):
-    img_dir = img_dir.rstrip()
-    i = inotify.adapters.InotifyTree(img_dir,
+    i = inotify.adapters.InotifyTree(str(Path(img_dir).resolve()),
                                      mask=(IN_ATTRIB | IN_DELETE |
                                            IN_MOVED_FROM | IN_MOVED_TO |
                                            IN_CLOSE_WRITE))
 
     while True:
         events = i.event_gen(yield_nones=False, timeout_s=15)
-        needs_upd, files_changed = needs_update(events)
-        if needs_upd:
-            ops = Operations(files_changed, img_dir)
-            logger.info('Updating server:\n\t\t%s', '\n\t\t'.join(
+        files_changed = needs_update(events)
+        if files_changed:
+            ops = Operations(files_changed, str(Path(img_dir).resolve()))
+            logger.info('Updating server: %s', ','.join(
                 str(x) for x in ops.ops))
-            images = Images(streams_dir)
+            images = Images(str(Path(streams_dir).resolve()))
             images.update(ops.ops)
             images.save()
             logger.info('Server updated')

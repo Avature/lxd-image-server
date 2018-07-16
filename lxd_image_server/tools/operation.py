@@ -63,39 +63,40 @@ class Operations(object):
         for event in self.events:
 
             # Operations done over directories
-            if 'IN_ISDIR' in event[1]:
-                if re.match('\d{8}_\d{2}:\d{2}', event[3]):
+            _, actions, parent, name = event
+            if 'IN_ISDIR' in actions:
+                if re.match('\d{8}_\d{2}:\d{2}', name):
                     self.ops.add(
                         Operation(
-                            str(Path(event[2], event[3])),
-                            event[1], self.root))
+                            str(Path(parent, name)),
+                            actions, self.root))
                 else:
-                    if 'IN_MOVED_FROM' not in event[1]:
+                    if 'IN_MOVED_FROM' not in actions:
                         tmp_ops.add(
                             Operation(
-                                str(Path(event[2], event[3])),
-                                event[1], self.root))
+                                str(Path(parent, name)),
+                                actions, self.root))
 
                     # Delete operation over non existing path
                     else:
                         self.ops.add(
                             Operation(
-                                str(Path(event[2], event[3])),
-                                event[1], self.root, True))
+                                str(Path(parent, name)),
+                                actions, self.root, True))
 
             # Only generate operation if it is a final path
-            elif re.match('\d{8}_\d{2}:\d{2}', event[2].split('/')[-1]):
+            elif re.match('\d{8}_\d{2}:\d{2}', parent.split('/')[-1]):
 
                 # Files operations are ADD_MOD unless all files has been
                 # deleted
-                path = Path(event[2])
+                path = Path(parent)
                 if path.exists() and [x for x in path.iterdir()
                                       if x.is_file()]:
                     op = OperationType.ADD_MOD
                 else:
                     op = OperationType.DELETE
 
-                self.ops.add(Operation(event[2], op, self.root))
+                self.ops.add(Operation(parent, op, self.root))
 
         # Generate operations for root paths
         for op in tmp_ops:

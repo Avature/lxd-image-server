@@ -4,6 +4,7 @@ export DH_VERBOSE=0
 
 function fix_permissions {
       chown -R www-data:www-data /var/log/lxd-image-server
+      chown -R www-data:www-data /var/www/simplestreams
       touch /var/log/lxd-image-server/lxd-image-server.log
       chown www-data:www-data /var/log/lxd-image-server/lxd-image-server.log
 }
@@ -14,12 +15,12 @@ case "$1" in
           adduser --system --no-create-home www-data
       fi
 
-      if [ ! -d "/var/log/lxd-image-server/" ];then
-          mkdir /var/log/lxd-image-server/
+      if [ ! -d "/var/www/simplestreams" ];then
+          mkdir /var/www/simplestreams
       fi
 
       fix_permissions
-      /opt/lxd-image-server/bin/lxd-image-server init
+      /opt/lxd-image-server/bin/lxd-image-server --log-file /var/log/lxd-image-server/lxd-image-server.log init
 
       # Enable the service to start on boot
       if command -V systemctl &> /dev/null; then
