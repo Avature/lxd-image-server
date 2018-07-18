@@ -1,6 +1,6 @@
-import attr
 import json
 from pathlib import Path
+import attr
 
 
 @attr.s

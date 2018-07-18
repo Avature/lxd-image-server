@@ -44,8 +44,7 @@ class Version(object):
             return 'squashfs'
         elif 'vcdiff' in name:
             return 'squashfs.vcdiff'
-        else:
-            return name
+        return name
 
     def _sha256_checksum(self, filename, block_size=65536):
         sha256 = hashlib.sha256()
