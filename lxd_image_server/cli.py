@@ -3,6 +3,8 @@ import sys
 import re
 import traceback
 import logging
+import queue
+import threading
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 import click
@@ -15,6 +17,13 @@ from lxd_image_server.tools.operation import Operations
 
 
 logger = logging.getLogger('lxd-image-server')
+event_queue = queue.Queue()
+
+
+def threaded(fn):
+    def wrapper(*args, **kwargs):
+        threading.Thread(target=fn, args=args, kwargs=kwargs).start()
+    return wrapper
 
 
 def configure_log(log_file, verbose=False):
@@ -44,13 +53,27 @@ def needs_update(events):
     return modified_files
 
 
+@threaded
+def update_metadata(img_dir, streams_dir):
+    while True:
+        events = event_queue.get()
+        ops = Operations(events, str(Path(img_dir).resolve()))
+        if ops:
+            logger.info('Updating server: %s', ','.join(
+                str(x) for x in ops.ops))
+            images = Images(str(Path(streams_dir).resolve()))
+            images.update(ops.ops)
+            images.save()
+            logger.info('Server updated')
+
+
 def fix_permissions(path):
-    Path(path).chmod(0o777)
+    Path(path).chmod(0o775)
     for root, dirs, files in os.walk(path):
         for elem in files:
-            Path(root, elem).chmod(0o777)
+            Path(root, elem).chmod(0o775)
         for elem in dirs:
-            Path(root, elem).chmod(0o777)
+            Path(root, elem).chmod(0o775)
 
 
 @click.group()
@@ -136,6 +159,9 @@ def init(ctx, root_dir, ssl_dir):
                               resolve_path=True), show_default=True)
 @click.pass_context
 def watch(ctx, img_dir, streams_dir):
+    # Lauch thread
+    update_metadata(img_dir, streams_dir)
+
     i = inotify.adapters.InotifyTree(str(Path(img_dir).resolve()),
                                      mask=(IN_ATTRIB | IN_DELETE |
                                            IN_MOVED_FROM | IN_MOVED_TO |
@@ -145,13 +171,7 @@ def watch(ctx, img_dir, streams_dir):
         events = i.event_gen(yield_nones=False, timeout_s=15)
         files_changed = needs_update(events)
         if files_changed:
-            ops = Operations(files_changed, str(Path(img_dir).resolve()))
-            logger.info('Updating server: %s', ','.join(
-                str(x) for x in ops.ops))
-            images = Images(str(Path(streams_dir).resolve()))
-            images.update(ops.ops)
-            images.save()
-            logger.info('Server updated')
+            event_queue.put(files_changed)
 
 
 def main():

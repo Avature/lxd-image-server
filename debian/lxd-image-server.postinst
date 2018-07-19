@@ -15,6 +15,10 @@ case "$1" in
           adduser --system --no-create-home www-data
       fi
 
+      if ! getent passwd lxdadm >/dev/null ; then
+          useradd -md /home/lxdadm -s /bin/bash -c 'Image server uploader' -g www-data lxdadm
+      fi
+
       if [ ! -d "/var/www/simplestreams" ];then
           mkdir /var/www/simplestreams
       fi
