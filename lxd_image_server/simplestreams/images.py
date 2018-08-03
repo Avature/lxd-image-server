@@ -1,5 +1,6 @@
 import hashlib
 import json
+import time
 from pathlib import Path
 import attr
 from lxd_image_server.tools.operation import OperationType
@@ -120,5 +121,6 @@ class Images(object):
     def save(self):
         if self.path:
             with open(str(Path(self.path, 'images.json')), 'w') as outfile:
+                self.root['last_update'] = time.time()
                 json.dump(self.root, outfile)
         self.index.save()

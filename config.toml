@@ -1,0 +1,7 @@
+[mirrors]
+  # Add each mirror with its info. Example:
+  # [madrid]
+  # user = "lxdadm"
+  # url = "https://madrid.avature.net:8443"
+  # Make sure key has 700 permission and the ownership is lxdadm:www-data
+  # key_path = "/etc/lxd-image-server/madrid.key"

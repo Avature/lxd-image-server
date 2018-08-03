@@ -7,7 +7,7 @@ WantedBy=multi-user.target
 
 [Service]
 Restart=on-failure
-User=www-data
+User=lxdadm
 StandardOutput=journal+console
 Environment="LC_ALL=C.UTF-8"
 Environment="LANG=C.UTF-8"
