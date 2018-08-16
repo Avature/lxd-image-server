@@ -1,3 +1,4 @@
 # Declare a list of directories to be created
 # eg:
 /var/log/lxd-image-server
+/etc/nginx/lxd-image-server

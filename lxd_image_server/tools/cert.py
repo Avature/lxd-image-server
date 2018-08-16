@@ -28,7 +28,7 @@ def generate_cert(path):
     )
 
     name = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, socket.gethostname())])
+        x509.NameAttribute(NameOID.COMMON_NAME, u"lxd-image-server.localhost")])
 
     now = datetime.utcnow()
     basic_contraints = x509.BasicConstraints(ca=True, path_length=0)
@@ -44,9 +44,7 @@ def generate_cert(path):
         .add_extension(basic_contraints, False)
         .add_extension(
             x509.SubjectAlternativeName([
-                x509.DNSName(u"localhost"),
-                x509.DNSName(ip_address),
-                x509.IPAddress(ipaddress.ip_address(ip_address))]),
+                x509.DNSName(u"lxd.localhost")]),
             critical=False,)
         .sign(key, hashes.SHA256(), default_backend()))
 

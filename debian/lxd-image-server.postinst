@@ -9,6 +9,15 @@ function fix_permissions {
       chown www-data:www-data /var/log/lxd-image-server/lxd-image-server.log
 }
 
+function add_local_hosts {
+    if ! grep -q lxd.localhost /etc/hosts; then
+        echo 127.0.0.1 lxd.localhost >> /etc/hosts
+    fi
+    if ! grep -q lxd-image-server.localhost /etc/hosts; then
+        echo 127.0.0.1 lxd-image-server.localhost >> /etc/hosts
+    fi
+}
+
 case "$1" in
   configure)
       if ! getent passwd www-data >/dev/null ; then
@@ -24,6 +33,7 @@ case "$1" in
       fi
 
       fix_permissions
+      add_local_hosts
       /opt/lxd-image-server/bin/lxd-image-server --log-file /var/log/lxd-image-server/lxd-image-server.log init
 
       # Enable the service to start on boot
