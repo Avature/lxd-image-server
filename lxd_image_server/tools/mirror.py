@@ -28,18 +28,18 @@ class Mirror():
                    ' -l ' + self.user, op_path,
                    self.servername + ':' + str(Path(op_path).parent),
                    '--delete']
-        result = subprocess.run(command)
-
-        if result.returncode != 0:
-            logger.error('Fail to synchronize %s' % str(result.stdout))
+        try:
+            subprocess.run(command).check_returncode()
+        except subprocess.CalledProcessError as error:
+            logger.error('Fail to synchronize: %s', error)
         else:
-            logger.info("Path %s synced for mirror %s" % (op_path, self.name))
+            logger.info("Path %s synced for mirror %s", op_path, self.name)
 
     @property
     def servername(self):
         match = re.search(r'https://([\w\.]*):?\d*', self.url)
         if match:
-            return match.groups()[0]
+            return match.group(1)
         else:
             logger.error('Server %s has no host' % self.url)
 
