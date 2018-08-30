@@ -14,6 +14,8 @@ from inotify.constants import (IN_ATTRIB, IN_DELETE, IN_MOVED_FROM,
 from lxd_image_server.simplestreams.images import Images
 from lxd_image_server.tools.cert import generate_cert
 from lxd_image_server.tools.operation import Operations
+from lxd_image_server.tools.mirror import MirrorManager
+from lxd_image_server.tools.config import Config
 
 
 logger = logging.getLogger('lxd-image-server')
@@ -54,7 +56,19 @@ def needs_update(events):
 
 
 @threaded
+def update_config():
+    i = inotify.adapters.Inotify()
+    i.add_watch(Config.path, mask=IN_CLOSE_WRITE)
+    for _ in i.event_gen(yield_nones=False):
+        Config.data = {}
+        Config.load_data()
+        MirrorManager.update_mirror_list()
+
+
+@threaded
 def update_metadata(img_dir, streams_dir):
+    MirrorManager.img_dir = img_dir
+    MirrorManager.update_mirror_list()
     while True:
         events = event_queue.get()
         ops = Operations(events, str(Path(img_dir).resolve()))
@@ -64,6 +78,7 @@ def update_metadata(img_dir, streams_dir):
             images = Images(str(Path(streams_dir).resolve()))
             images.update(ops.ops)
             images.save()
+            MirrorManager.update()
             logger.info('Server updated')
 
 
@@ -159,7 +174,9 @@ def init(ctx, root_dir, ssl_dir):
                               resolve_path=True), show_default=True)
 @click.pass_context
 def watch(ctx, img_dir, streams_dir):
-    # Lauch thread
+    Config.load_data()
+    # Lauch threads
+    update_config()
     update_metadata(img_dir, streams_dir)
 
     i = inotify.adapters.InotifyTree(str(Path(img_dir).resolve()),

@@ -3,3 +3,4 @@ attrs>=15.2.0
 click
 inotify
 cryptography
+confight

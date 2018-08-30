@@ -3,10 +3,10 @@
 export DH_VERBOSE=0
 
 function fix_permissions {
-      chown -R www-data:www-data /var/log/lxd-image-server
-      chown -R www-data:www-data /var/www/simplestreams
+      chown -R lxdadm:www-data /var/log/lxd-image-server
+      chown -R lxdadm:www-data /var/www/simplestreams
       touch /var/log/lxd-image-server/lxd-image-server.log
-      chown www-data:www-data /var/log/lxd-image-server/lxd-image-server.log
+      chown lxdadm:www-data /var/log/lxd-image-server/lxd-image-server.log
 }
 
 case "$1" in
