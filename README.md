@@ -59,8 +59,46 @@ Subcommand update recreates all the metadata from scratch, and recalculate the
 sha256 info for all the images. This option is only intended as a safeguard or in case
 the service is not running.
 
-Subcommand watch will start the monitoring of the directory. It is intended to be 
+Subcommand watch will start the monitoring of the directory. It is intended to be
 used only if the service is not running.
+
+
+Building the debian package
+------------------------------------------
+
+### Building the package ###
+
+To build lxd-image-server, first, install the build dependecies:
+
+```bash
+# debhelper >= 9
+# dh-virtualenv >= 9
+apt-get install debhelper dh-exec python3 python-dev dh-virtualenv
+```
+
+Then build the package:
+
+```bash
+dpkg-buildpackage -us -uc -b
+```
+
+### Building the package in a Docker container ###
+
+To build lxd-image-server itself in a Docker container, call docker build:
+
+```bash
+docker build --tag lxd-image-server-builder .
+```
+
+This will build the DEB package for Ubuntu Bionic by default. Add e.g.
+--build-arg distro=ubuntu:xenial to build for Ubuntu Xenial.
+
+The resulting files must be copied out of the build container, using these
+commands:
+
+```bash
+mkdir -p dist && docker run --rm lxd-image-server-builder tar -C /dpkg -c . | tar -C dist -xv
+```
 
 Installation
 ------------
