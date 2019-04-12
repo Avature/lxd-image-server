@@ -7,6 +7,7 @@ Build-Depends: debhelper (>= 9),
                dh-exec,
                python3,
                python-dev,
+               python-pip,
                dh-virtualenv (>= 0.8)
 
 Package: lxd-image-server

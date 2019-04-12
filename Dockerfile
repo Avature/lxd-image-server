@@ -10,7 +10,7 @@ FROM ${distro} AS dpkg-build
 RUN apt-get update -qq -o Acquire::Languages=none \
     && env DEBIAN_FRONTEND=noninteractive apt-get install \
         -yqq --no-install-recommends -o Dpkg::Options::=--force-unsafe-io \
-        build-essential debhelper dh-exec python3 python-dev dh-virtualenv \
+        build-essential debhelper dh-exec python3 python-pip python-dev dh-virtualenv \
     && apt-get clean && rm -rf "/var/lib/apt/lists"/*
 WORKDIR /dpkg-build
 COPY ./ ./
