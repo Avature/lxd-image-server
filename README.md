@@ -99,8 +99,34 @@ configuration (when using default configuration it is recommended to use debian 
 Usage
 -----
 
-The installed service will automatically monitor the image directory and update
-all the required metadata. No further commands are needed.
+Lxd-image-server is not just a new remote for your lxd, it also allows you to
+distribute your images to different mirrors. Clients will update new images to
+the master server and the master will mirror the image on the mirrors defined
+on the configuration file.
+
+The following picture describes, the master server which replicates images to
+other two servers. Clients can get images from any of them but they can only
+upload new images to the master.
+
+
+![usage](/doc/images/lxd-usage.svg "lxc usage")
+
+The configuration file would be:
+
+```yaml
+[mirrors]
+  [mirror1]
+  user = "lxdadm"
+  url = "https://mirror1.xxxxxxx.com:8443"
+  key_path = "/etc/lxd-image-server/lxdhub.key"
+  [mirror2]
+  user = "lxdadm"
+  url = "https://mirror2.xxxxxxx.com:8443"
+  key_path = "/etc/lxd-image-server/lxdhub.key"
+```
+
+The installed service on the master will automatically monitor the image
+directory and update all the required metadata. No further commands are needed.
 
 This is the structure the simplestreams server needs to have.
 
