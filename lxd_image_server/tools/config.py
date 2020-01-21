@@ -43,3 +43,8 @@ class Config():
 
         cls.paths = cls.pathsAsDict.keys()
         cls.pathsAsDict = {}
+        # allow lack of any config file
+        if 'mirrors' not in cls.data:
+            cls.data['mirrors'] = {}
+
+
