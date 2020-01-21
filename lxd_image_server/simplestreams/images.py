@@ -21,17 +21,19 @@ class Version(object):
         }
         self.combined_sha = hashlib.new('sha256')
 
-        for f in [str(x.name) for x in Path(self.path).iterdir()
-                  if Path(self.path, x).is_file()]:
+        for f in Path(self.path).iterdir():
+            if not f.is_file() or f.name in ['metadata.json']:
+                continue
+
             self.root[self.name]['items'].update({
-                f: {
+                f.name: {
                     'sha256':
-                        self._sha256_checksum(str(Path(self.path, f))),
-                    'size': Path(self.path, f).stat().st_size,
+                        self._sha256_checksum(str(f)),
+                    'size': f.stat().st_size,
                     'path':
                         str('images' /
-                            Path(self.path).relative_to(self.root_path) / f),
-                    'ftype': self._get_type(f)
+                            f.relative_to(self.root_path)),
+                    'ftype': self._get_type(f.name)
                 }
             })
 
@@ -60,6 +62,7 @@ class Version(object):
 class Images(object):
     path = attr.ib(default=None)
     rebuild = attr.ib(default=False)
+    logger = attr.ib(default=None)
 
     def __attrs_post_init__(self):
         self.index = Index(self.path, self.rebuild)
@@ -96,22 +99,47 @@ class Images(object):
                     self._add(op.name, op.path, op.root)
                     self.index.add(op.name)
 
+    def _load_info_from_file(self, path):
+        f = Path(path, "metadata.json")
+        o = {}
+        if f.exists() and f.is_file():
+            if self.logger:
+                self.logger.debug("Loading info from {}".format(str(f)))
+            try:
+                with open(str(f)) as json_file:
+                    o = json.load(json_file)
+            except:
+                if self.logger:
+                    self.logger.warn("Failed to load JSON from {}".format(str(f)))
+        return o
+
     def _add(self, name, path, root):
+
         if Path(path).exists():
             v = Version(path.split('/')[-1], path, root)
 
             if name not in self.root['products']:
                 fields = name.split(':')
-                self.root['products'].update({
-                    name: {
-                        'versions': {},
-                        'os': fields[0],
-                        'release': fields[1],
-                        'release_title': fields[1],
-                        'arch': fields[2],
-                        'aliases': '/'.join(fields)
-                    }
-                })
+
+                o = self._load_info_from_file(path)
+                alias = '/'.join(fields)
+                d = {
+                    'versions': {},
+                    'os': fields[0],
+                    'release': fields[1],
+                    'release_title': fields[1],
+                    'arch': fields[2],
+                    'aliases': alias
+                }
+                # direct copy fields:
+                for field in ['os', 'release_title', 'aliases']:
+                    if field in o:
+                        d[field] = o[field]
+
+                if alias not in d['aliases'].split(","):
+                    d['aliases'] += "," + alias
+
+                self.root['products'].update( { name: d } )
 
             self.root['products'][name]['versions'].update(v.root)
 

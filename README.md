@@ -125,20 +125,23 @@ The configuration file would be:
   key_path = "/etc/lxd-image-server/lxdhub.key"
 ```
 
+Configuration files are 'toml' files and are read from (/etc,~/.config)/lxd-image-server/(config.toml,conf.d/*)
+Code should automatically reload them if they change.
+ 
 The installed service on the master will automatically monitor the image
 directory and update all the required metadata. No further commands are needed.
 
-This is the structure the simplestreams server needs to have.
+This is the structure the simplestreams server needs to have:
 
 ```
 - /var/www                                         # document root
         `- simplestreams
            |- images                               # images folder
-           |  `- iats                              # environment
+           |  `- iats                              # environment|product
            |     `- xenial                         # release
            |        `- amd64                       # architecture
            |           `- default                  # box type
-           |              `- 20180716_12:00        # version 1
+           |              `- 20180716_12:00        # version 1 (mandatory format: 'YYYYMMDD_HH:MM')
            |                 |- lxd.tar.xz         # index and templates
            |                 `- rootfs.squashfs    # rootfs of container
            `- streams
@@ -147,6 +150,23 @@ This is the structure the simplestreams server needs to have.
                  `- images.json                    # info with versions of products
 ```
 
+Your product will be named by concatenating all the directories names. As seen above, name will be
+"iats:xenial:amd64:default"
+
+Your product definition, inside images.json file will have these fields:
+- arch = the new of the architecture directory
+- os = the environment|product name
+- release = the release directory name
+- release_title = the release directory name
+- aliases: a single alias with the name of the product.
+
+You can enhance these values by uploading also a 'metadata.json' file (which will not appear in the images.json file), 
+and which can contain the following fields:
+- os
+- release_title
+- aliases = string of aliases, joined by ','. Name of product will be added automatically.
+
+
 The command `lxd-image-server` can be used to manage the server manually:
 
 ```sh
@@ -154,6 +174,7 @@ Usage: lxd-image-server [OPTIONS] COMMAND [ARGS]...
 
 Options:
   --log-file TEXT  [default: ./lxd-image-server.log]
+        use 'STDOUT' or 'STDERR' as file names, if needed
   --verbose        Sets log level to debug
   --help           Show this message and exit.
 
@@ -196,7 +217,8 @@ Once your own image server is running, you can add it as new remote on lxc:
 lxc remote add <name> <url> --protocol=simplestreams
 ```
 
-Remember add the certificate:
+Remember to add the certificate:
+If behind a SSL terminating proxy, skip this step, and you can run 'init' step with '--ssl_skip'  
 
 ```bash
 openssl s_client -showcerts -connect <url>:443 </dev/null 2>/dev/null | openssl x509 -outform PEM > my-lxd-image-server.cert
