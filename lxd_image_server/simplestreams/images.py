@@ -6,7 +6,6 @@ import attr
 from lxd_image_server.tools.operation import OperationType
 from lxd_image_server.simplestreams.index import Index
 
-
 @attr.s
 class Version(object):
     name = attr.ib()
@@ -19,28 +18,52 @@ class Version(object):
                 'items': {}
             }
         }
-        self.combined_sha = hashlib.new('sha256')
+        items = {}
+        sha256_lxd = None
+        lxd_key = None
 
+        # first we build the list of files. No sha256 yet
         for f in Path(self.path).iterdir():
             if not f.is_file() or f.name in ['metadata.json']:
                 continue
+            data = {
+                'size': f.stat().st_size,
+                'path':
+                    str('images' /
+                        f.relative_to(self.root_path)),
+                'ftype': self._get_type(f.name)
+            }
 
-            self.root[self.name]['items'].update({
-                f.name: {
-                    'sha256':
-                        self._sha256_checksum(str(f)),
-                    'size': f.stat().st_size,
-                    'path':
-                        str('images' /
-                            f.relative_to(self.root_path)),
-                    'ftype': self._get_type(f.name)
-                }
-            })
+            if data['ftype'] == 'lxd.tar.xz':
+                lxd_key = str(f)
+                sha256_lxd = hashlib.sha256()
+                self._do_sha256_checksum(str(f), [sha256_lxd])
+                data['sha256'] = sha256_lxd.hexdigest()
 
-        if len(self.root[self.name]['items']) > 1 and \
-                self.root[self.name]['items'].get('lxd.tar.xz'):
-            self.root[self.name]['items']['lxd.tar.xz']['combined_sha256'] = \
-                self.combined_sha.hexdigest()
+            items[str(f)] = data
+
+        for (f, data) in items.items():
+            if 'sha256' in data:
+                continue
+
+            sha_object = hashlib.sha256()
+            sha_object2 = None
+            lxd_key_additional = None
+
+            if data['ftype'] in ['squashfs', 'root.tar.xz']:
+                sha_object2 = sha256_lxd.copy()
+
+            self._do_sha256_checksum(str(f), [sha_object, sha_object2]),
+            data['sha256'] = sha_object.hexdigest()
+            if data['ftype'] == 'squashfs':
+                items[lxd_key]['combined_squashfs_sha256'] = sha_object2.hexdigest()
+            elif data['ftype'] == 'root.tar.xz':
+                # combined_sha256 is legacy key
+                items[lxd_key]['combined_rootxz_sha256'] = items[lxd_key]['combined_sha256'] = sha_object2.hexdigest()
+
+        for (f, data) in items.items():
+            self.root[self.name]['items'].update({ Path(f).name : data })
+
 
     def _get_type(self, name):
         if 'squashfs' in name:
@@ -49,13 +72,12 @@ class Version(object):
             return 'squashfs.vcdiff'
         return name
 
-    def _sha256_checksum(self, filename, block_size=65536):
-        sha256 = hashlib.sha256()
+    def _do_sha256_checksum(self, filename, sha_objects: list, block_size=65536):
         with open(filename, 'rb') as f:
             for block in iter(lambda: f.read(block_size), b''):
-                sha256.update(block)
-                self.combined_sha.update(block)
-        return sha256.hexdigest()
+                for sha_object in sha_objects:
+                    if sha_object is not None:
+                        sha_object.update(block)
 
 
 @attr.s
