@@ -209,7 +209,7 @@ Also, you can use https://letsencrypt.org/ and makes easer use your server.
 
 ### Publish a new image ###
 
-Create a image container and publish:
+Now, any client can create a image container and publish it on the master server. [Here]9https://ubuntu.com/blog/publishing-lxd-images):
 
 ```bash
 lxc launch lxc:ubuntu/bionic/amd64 n1
@@ -225,3 +225,5 @@ Now, you can use your image in a new container
 lxc launch bionic-vim ntest
 lxc exec ntest -- vim -c "smile"
 ```
+
+For more information [Here](https://ubuntu.com/blog/publishing-lxd-images).
