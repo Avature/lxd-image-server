@@ -21,7 +21,6 @@ from lxd_image_server.tools.config import Config
 logger = logging.getLogger('lxd-image-server')
 event_queue = queue.Queue()
 
-
 def threaded(fn):
     def wrapper(*args, **kwargs):
         threading.Thread(target=fn, args=args, kwargs=kwargs).start()
@@ -39,7 +38,7 @@ def configure_log(log_file, verbose=False):
         handler = TimedRotatingFileHandler(
             filename,
             when="d", interval=7, backupCount=4)
-    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] [LxdImgServer] [%(levelname)s] %(message)s')
     handler.setFormatter(formatter)
 
     logger.setLevel('DEBUG' if verbose else 'INFO')
@@ -61,7 +60,7 @@ def needs_update(events):
 
 
 
-def config_inotify_setup() -> inotify.adapters.Inotify:
+def config_inotify_setup(skipWatchingNonExistent: bool) -> inotify.adapters.Inotify:
     i = inotify.adapters.Inotify()
     watchedDirs = {}
 
@@ -73,7 +72,7 @@ def config_inotify_setup() -> inotify.adapters.Inotify:
             else:
                 logger.debug("Watching existing config directory {}".format(p))
                 i.add_watch(p) # SEEME: all events?
-        else:
+        elif not skipWatchingNonExistent:
             (d, n) = os.path.split(p)
             while not os.path.exists(d):
                 (d, n) = os.path.split(d)
@@ -85,8 +84,8 @@ def config_inotify_setup() -> inotify.adapters.Inotify:
     return i
 
 @threaded
-def update_config():
-    i = config_inotify_setup()
+def update_config(skipWatchingNonExistent = True):
+    i = config_inotify_setup(skipWatchingNonExistent)
     while True:
         reload = False
         for event in i.event_gen(yield_nones=False):
@@ -228,19 +227,20 @@ def init(ctx, root_dir, ssl_dir, ssl_skip, nginx_skip):
 @click.option('--streams_dir', default='/var/www/simplestreams/streams/v1',
               type=click.Path(exists=True, file_okay=False,
                               resolve_path=True), show_default=True)
+@click.option('--skip-watch-config-non-existent', default=False, type=bool, is_flag=True)
 @click.pass_context
-def watch(ctx, img_dir, streams_dir):
+def watch(ctx, img_dir, streams_dir, skip_watch_config_non_existent: bool):
     path_img_dir = str(Path(img_dir).expanduser().resolve())
     path_streams_dir = str(Path(streams_dir).expanduser().resolve())
+    logger.info("lxd-image-server: Starting watch process")
 
     Config.load_data()
     # Lauch threads
     # SEEME: in case an event will come from watching config files, there is a race condition between update_config
     # thread using indirectly MirrorManager.img_dir and thread update_metadata setting MirrorManager.img_dir
     # Also, race condition on calling MirrorManager.update_mirror_list() in both threads.
-    update_config()
+    update_config(skip_watch_config_non_existent)
     update_metadata(path_img_dir, path_streams_dir)
-
     logger.debug("Watching image directory {}".format(path_img_dir))
 
     i = inotify.adapters.InotifyTree(path_img_dir,
