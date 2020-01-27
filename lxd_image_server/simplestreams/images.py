@@ -50,16 +50,17 @@ class Version(object):
             sha_object2 = None
             lxd_key_additional = None
 
-            if data['ftype'] in ['squashfs', 'root.tar.xz']:
+            if data['ftype'] in ['squashfs', 'root.tar.xz'] and sha256_lxd is not None:
                 sha_object2 = sha256_lxd.copy()
 
             self._do_sha256_checksum(str(f), [sha_object, sha_object2]),
             data['sha256'] = sha_object.hexdigest()
-            if data['ftype'] == 'squashfs':
-                items[lxd_key]['combined_squashfs_sha256'] = sha_object2.hexdigest()
-            elif data['ftype'] == 'root.tar.xz':
-                # combined_sha256 is legacy key
-                items[lxd_key]['combined_rootxz_sha256'] = items[lxd_key]['combined_sha256'] = sha_object2.hexdigest()
+            if sha_object2 is not None:
+                if data['ftype'] == 'squashfs':
+                    items[lxd_key]['combined_squashfs_sha256'] = sha_object2.hexdigest()
+                elif data['ftype'] == 'root.tar.xz':
+                    # combined_sha256 is legacy key
+                    items[lxd_key]['combined_rootxz_sha256'] = items[lxd_key]['combined_sha256'] = sha_object2.hexdigest()
 
         for (f, data) in items.items():
             self.root[self.name]['items'].update({ Path(f).name : data })
