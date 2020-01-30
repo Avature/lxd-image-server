@@ -154,18 +154,18 @@ Your product will be named by concatenating all the directories names. As seen a
 "iats:xenial:amd64:default"
 
 Your product definition, inside images.json file will have these fields:
-- arch = the new of the architecture directory
-- os = the environment|product name
-- release = the release directory name
-- release_title = the release directory name
-- aliases: a single alias with the name of the product.
+- arch = the name of the architecture directory (amd64, in the example)
+- os = the environment|product name (iats, in the example)
+- release = the release directory name (xenial, in the example)
+- release_title = the release directory name (xenial, in the example)
+- aliases: a **single** alias with the name of the product (iats:xenial:amd64:default, in the example)
 
-You can enhance these values by uploading also a 'metadata.json' file (which will not appear in the images.json file), 
+You can change these values by uploading also a 'metadata.json' file (which will not appear in the images.json file), 
 and which can contain the following fields:
 - os
 - release_title
-- aliases = string of aliases, joined by ','. Name of product will be added automatically.
-
+- aliases = string of aliases, joined by ','. Name of product alias will be added automatically.
+Preferably you should upload this 'metadata.json' at the beginning rather than after the big actual image files.
 
 The command `lxd-image-server` can be used to manage the server manually:
 
