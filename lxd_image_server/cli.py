@@ -232,7 +232,7 @@ def init(ctx, root_dir, ssl_dir, ssl_skip, nginx_skip):
 def watch(ctx, img_dir, streams_dir, skip_watch_config_non_existent: bool):
     path_img_dir = str(Path(img_dir).expanduser().resolve())
     path_streams_dir = str(Path(streams_dir).expanduser().resolve())
-    logger.info("lxd-image-server: Starting watch process")
+    logger.info("Starting watch process")
 
     Config.load_data()
     # Lauch threads
