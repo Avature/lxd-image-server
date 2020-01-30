@@ -31,9 +31,14 @@ def threaded(fn):
 def configure_log(log_file, verbose=False):
     filename = log_file
 
-    handler = TimedRotatingFileHandler(
-        filename,
-        when="d", interval=7, backupCount=4)
+    if log_file == 'STDOUT':
+        handler = logging.StreamHandler(sys.stdout)
+    elif log_file == 'STDERR':
+        handler = logging.StreamHandler(sys.stderr)
+    else:
+        handler = TimedRotatingFileHandler(
+            filename,
+            when="d", interval=7, backupCount=4)
     formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
     handler.setFormatter(formatter)
 
