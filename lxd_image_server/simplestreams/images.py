@@ -37,8 +37,8 @@ class Version(object):
 
         if len(self.root[self.name]['items']) > 1 and \
                 self.root[self.name]['items'].get('lxd.tar.xz'):
-            self.root[self.name]['items']['lxd.tar.xz']['combined_sha256'] = \
-                self.combined_sha.hexdigest()
+            self.root[self.name]['items']['lxd.tar.xz'] \
+                ['combined_squashfs_sha256'] = self.combined_sha.hexdigest()
 
     def _get_type(self, name):
         if 'squashfs' in name:
