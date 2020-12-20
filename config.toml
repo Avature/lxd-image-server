@@ -1,7 +1,34 @@
-[mirrors]
+# [mirrors]
   # Add each mirror with its info. Example:
   # [lxdhub]
   # user = "lxdadm"
   # url = "https://lxdhub.xxxxxxx.com:8443"
   # Make sure key has 700 permission and the ownership is lxdadm:www-data
   # key_path = "/etc/lxd-image-server/lxdhub.key"
+
+[logging]
+  version = 1
+  disable_existing_loggers = 1
+
+[logging.formatters.simple]
+  format = "%(message)s"
+
+[logging.formatters.complex]
+  format = "%(levelname)s %(asctime)s %(message)s"
+
+[logging.handlers.filelog]
+  level = "INFO"
+  class = "logging.FileHandler"
+  filename = "/var/log/lxd-image-server/lxd-image-server.log"
+  formatter = "complex"
+
+[logging.handlers.console]
+  level = "ERROR"
+  class = "logging.StreamHandler"
+  formatter = "simple"
+
+# Main logger of the application
+[logging.loggers.lxd_image_server]
+  handlers = ["console", "filelog"]
+  level = "INFO"
+  propagate = false

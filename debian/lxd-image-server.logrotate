@@ -1,0 +1,9 @@
+/var/log/lxd-image-server/lxd-image-server.log {
+    daily
+    missingok
+    rotate 21
+    compress
+    delaycompress
+    copytruncate
+    notifempty
+}
