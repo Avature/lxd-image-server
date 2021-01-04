@@ -153,7 +153,6 @@ The command `lxd-image-server` can be used to manage the server manually:
 Usage: lxd-image-server [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --log-file TEXT  [default: ./lxd-image-server.log]
   --verbose        Sets log level to debug
   --help           Show this message and exit.
 
@@ -166,6 +165,11 @@ Default paths:
     - Index files: /var/www/simplestreams/streams/v1
     - Image dirs: /var/www/simplestreams/images
 ```
+
+### Logging configuration
+
+The logging via configuration. The default configuration is defined
+[here](lxd_image_server/default_config.toml).
 
 ### Subcommands ###
 
@@ -205,7 +209,7 @@ update-ca-certificates
 systemctl restart lxd
 ```
 
-Also, you can use https://letsencrypt.org/ and makes easer use your server.
+Also, you can use https://letsencrypt.org/ and makes easier use your server.
 
 ### Publish a new image ###
 

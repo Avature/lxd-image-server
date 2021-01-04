@@ -12,4 +12,5 @@ StandardOutput=journal+console
 Environment="LC_ALL=C.UTF-8"
 Environment="LANG=C.UTF-8"
 
-ExecStart=/opt/lxd-image-server/bin/lxd-image-server --log-file /var/log/lxd-image-server/lxd-image-server.log watch
+ExecStart=/opt/lxd-image-server/bin/lxd-image-server watch
+ExecReload=/bin/sh -c '/usr/bin/lxd-image-server reload'

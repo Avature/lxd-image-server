@@ -4,3 +4,4 @@ click
 inotify
 cryptography
 confight
+python-pidfile

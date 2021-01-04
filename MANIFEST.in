@@ -1,3 +1,4 @@
 include *.md
 include *.txt
+include lxd_image_server/default_config.toml
 include debian/changelog

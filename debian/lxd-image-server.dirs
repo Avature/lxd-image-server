@@ -2,3 +2,4 @@
 # eg:
 /var/log/lxd-image-server
 /etc/nginx/lxd-image-server
+/var/run/lxd-image-server

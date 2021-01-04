@@ -4,11 +4,13 @@ import re
 import traceback
 import logging
 import queue
+import signal
 import threading
-from logging.handlers import TimedRotatingFileHandler
+from logging.config import dictConfig
 from pathlib import Path
 import click
 import inotify.adapters
+import pidfile
 from inotify.constants import (IN_ATTRIB, IN_DELETE, IN_MOVED_FROM,
                                IN_MOVED_TO, IN_CLOSE_WRITE)
 from lxd_image_server.simplestreams.images import Images
@@ -18,7 +20,7 @@ from lxd_image_server.tools.mirror import MirrorManager
 from lxd_image_server.tools.config import Config
 
 
-logger = logging.getLogger('lxd-image-server')
+logger = logging.getLogger(__name__)
 event_queue = queue.Queue()
 
 
@@ -28,22 +30,13 @@ def threaded(fn):
     return wrapper
 
 
-def configure_log(log_file, verbose=False):
-    filename = log_file
-
-    if log_file == 'STDOUT':
-        handler = logging.StreamHandler(sys.stdout)
-    elif log_file == 'STDERR':
-        handler = logging.StreamHandler(sys.stderr)
-    else:
-        handler = TimedRotatingFileHandler(
-            filename,
-            when="d", interval=7, backupCount=4)
-    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
-    handler.setFormatter(formatter)
-
-    logger.setLevel('DEBUG' if verbose else 'INFO')
-    logger.addHandler(handler)
+def configure_log(verbose=False):
+    log_config = Config.get('logging', {})
+    if verbose:
+        for ltype in ['handlers', 'loggers']:
+            for elem in log_config.get(ltype, []):
+                elem.setLeve('DEBUG')
+    dictConfig(log_config)
 
 
 def needs_update(events):
@@ -60,18 +53,18 @@ def needs_update(events):
     return modified_files
 
 
-@threaded
 def update_config():
-    i = inotify.adapters.Inotify()
-    i.add_watch(Config.path, mask=IN_CLOSE_WRITE)
-    for _ in i.event_gen(yield_nones=False):
-        Config.data = {}
+    def reload_on_signal(signum, frame):
+        logger.info('Relading configuration')
         Config.load_data()
+        configure_log()
         MirrorManager.update_mirror_list()
+    signal.signal(signal.SIGHUP, reload_on_signal)
 
 
 @threaded
 def update_metadata(img_dir, streams_dir):
+    logger.info('start watching for new images')
     MirrorManager.img_dir = img_dir
     MirrorManager.update_mirror_list()
     while True:
@@ -97,12 +90,11 @@ def fix_permissions(path):
 
 
 @click.group()
-@click.option('--log-file', default='./lxd-image-server.log',
-              show_default=True)
 @click.option('--verbose', help='Sets log level to debug',
               is_flag=True, default=False)
-def cli(log_file, verbose):
-    configure_log(log_file, verbose)
+def cli(verbose):
+    Config.load_data()
+    configure_log(verbose)
 
 
 @cli.command()
@@ -131,6 +123,18 @@ def update(ctx, img_dir, streams_dir):
     images.save()
 
     logger.info('Server updated')
+
+
+@cli.command('reload', help='Reload daemon configuration')
+def reload_config():
+    pidfile = Config.pidfile
+    if pidfile and pidfile.exists():
+        with open(pidfile, 'r') as fread:
+            pid = int(fread.read())
+            logger.warning('Sending SIGHUP to %s for reloading', pid)
+            os.kill(pid, signal.SIGHUP)
+        return
+    logger.warning('pidfile %s does not exist maybe the daemon is not running')
 
 
 @cli.command()
@@ -179,7 +183,10 @@ def init(ctx, root_dir, ssl_dir):
                               resolve_path=True), show_default=True)
 @click.pass_context
 def watch(ctx, img_dir, streams_dir):
-    Config.load_data()
+    with pidfile.PIDFile(Config.pidfile):
+        _watch(img_dir, streams_dir)
+
+def _watch(img_dir, streams_dir):
     # Lauch threads
     update_config()
     update_metadata(img_dir, streams_dir)

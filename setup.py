@@ -24,6 +24,8 @@ setup(
     entry_points={
         'console_scripts': ['lxd-image-server = lxd_image_server.cli:main']
     },
+    include_package_data=True,
+    package_data={"lxd_image_server": ["default_config.toml"]},
     packages=find_packages(),
     classifiers=[
         'Intended Audience :: Developers',
