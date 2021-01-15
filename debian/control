@@ -12,7 +12,6 @@ Build-Depends: debhelper (>= 9),
 
 Package: lxd-image-server
 Architecture: all
+Pre-Depends: openssl, nginx
 Depends: python3,
-         openssl,
-         nginx
 Description: Package to create and manage a simplestreams lxd image server on top of nginx.
