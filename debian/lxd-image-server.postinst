@@ -35,6 +35,8 @@ case "$1" in
 
       fix_permissions
       add_local_hosts
+      export LC_ALL=C.UTF-8
+      export LANG=C.UTF-8
       /opt/lxd-image-server/bin/lxd-image-server init
 
       # Enable the service to start on boot
