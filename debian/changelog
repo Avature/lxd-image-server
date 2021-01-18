@@ -1,3 +1,9 @@
+lxd-image-server (0.0.3) Ubuntu; urgency=medium
+
+  * LXD 4 support
+
+ -- Carlos Duelo <carlos.duelo@avature.net>  Mon, 18 Jan 2021 14:01:33 -0500
+
 lxd-image-server (0.0.1) stable; urgency=medium
 
   * Initial release.
