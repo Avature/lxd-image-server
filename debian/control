@@ -4,11 +4,13 @@ Priority: extra
 Maintainer: devops <devops@avature.net>
 Standards-Version: 4.0.0
 Build-Depends: debhelper (>= 9),
-               dh-exec,
+               dh-exec,pandoc,dh-python,
+               dh-virtualenv (>= 1.0),
                python3,
-               python-dev,
-               python-pip,
-               dh-virtualenv (>= 0.8)
+               python3-dev,
+               python3-pip,
+               python3-venv,
+               python3-setuptools
 
 Package: lxd-image-server
 Architecture: all

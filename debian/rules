@@ -4,17 +4,14 @@
 # export DH_VERBOSE=1
 
 export DH_VIRTUALENV_INSTALL_ROOT=/opt
-export DH_VIRTUALENV_ARGUMENTS :=  --python python3
 
 %:
-		#dh $@ --with python-virtualenv
-		dh $@ --buildsystem=dh_virtualenv
+	dh $@ --with python-virtualenv --builtin-venv --python /usr/bin/python3
 
-override_dh_virtualenv:
-		dh_virtualenv --python python3 --setuptools
-		pip install setuptools
-		pip install tox
+override_dh_compress:
+	dh_compress --exclude=README.md
 
-override_dh_auto_test:
-		pip install setuptools
-		./test/utest
+override_dh_installman:
+	mkdir -p docs
+	pandoc README.md --standalone -f markdown -t man > docs/lxd-image-server.1
+	dh_installman --all

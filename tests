@@ -25,12 +25,6 @@ for arg in "$@" ; do
     esac
 done
 
-TOX_FLAGS=''
-# precise does not include the tox package
-if ! command -v tox &> /dev/null; then
-    pip install tox
-    TOX_FLAGS='-e py35,py36,py37'
-fi
+pip3 install tox
 
-cd "$(dirname "$0")/.."
-tox $TOX_FLAGS -- $verbose
+tox $verbose
