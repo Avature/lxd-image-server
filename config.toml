@@ -3,6 +3,8 @@
   # [lxdhub]
   # user = "lxdadm"
   # url = "https://lxdhub.xxxxxxx.com:8443"
+  # remote is replacing url, but url is not removed for backward compatibility
+  # remote = "lxdhub.xxxxxxx.com"
   # Make sure key has 700 permission and the ownership is lxdadm:www-data
   # key_path = "/etc/lxd-image-server/lxdhub.key"
 
