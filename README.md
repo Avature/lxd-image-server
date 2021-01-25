@@ -117,11 +117,11 @@ The configuration file would be:
 [mirrors]
   [mirror1]
   user = "lxdadm"
-  url = "https://mirror1.xxxxxxx.com:8443"
+  remote = "mirror1.xxxxxxx.com"
   key_path = "/etc/lxd-image-server/lxdhub.key"
   [mirror2]
   user = "lxdadm"
-  url = "https://mirror2.xxxxxxx.com:8443"
+  remote = "mirror2.xxxxxxx.com"
   key_path = "/etc/lxd-image-server/lxdhub.key"
 ```
 

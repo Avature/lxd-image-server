@@ -16,6 +16,7 @@ class Mirror():
     user = attr.ib()
     key_path = attr.ib()
     url = attr.ib()
+    remote = attr.ib()
     img_dir = attr.ib()
 
     def __attrs_post_init__(self):
@@ -39,6 +40,8 @@ class Mirror():
 
     @property
     def servername(self):
+        if self.remote:
+            return self.remote
         match = re.search(r'https://([\w\.]*):?\d*', self.url)
         if match:
             return match.group(1)
@@ -69,6 +72,7 @@ class MirrorManager():
                     mirror['user'],
                     mirror['key_path'],
                     mirror['url'],
+                    mirror.get('remote'),
                     cls.img_dir
                 )
             logger.info('Mirror list updated')
