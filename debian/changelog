@@ -1,3 +1,9 @@
+lxd-image-server (0.0.4) Ubuntu; urgency=medium
+
+  * [2ce586a0] add remote config to replace url
+
+ -- Carlos Duelo <carlos.duelo@avature.net>  Mon, 25 Jan 2021 16:25:39 -0500
+
 lxd-image-server (0.0.3) Ubuntu; urgency=medium
 
   * LXD 4 support
