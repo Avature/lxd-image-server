@@ -42,7 +42,7 @@ class Mirror():
     def servername(self):
         if self.remote:
             return self.remote
-        match = re.search(r'https://([\w\.]*):?\d*', self.url)
+        match = re.search(r'https://([\w\.-]*):?\d*', self.url)
         if match:
             return match.group(1)
         else:
